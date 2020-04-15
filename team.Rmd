@@ -1,0 +1,42 @@
+---
+title: Lab 5
+author: Hunter Rose, Tanner Boyle
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(stringr)
+```
+
+```{r}
+acc <- read.csv("https://raw.githubusercontent.com/xdaiISU/ds202materials/master/hwlabs/fars2017/accident.csv")
+
+person <- read.csv("https://raw.githubusercontent.com/xdaiISU/ds202materials/master/hwlabs/fars2017/person.csv")
+```
+
+```{r}
+acc %>%
+  select(DAY_WEEK) %>%
+  table()
+```
+As we can see, day 7 is the day with the most crashes. According to the FARS manual, day 7 is Saturday.
+```{r}
+acc %>%
+  select(HOUR) %>%
+  table()
+```
+The FARS manual declares the time variable in military time, and the hour with the most crashes is 18, or 6 o'clock. This makes sense because it is within rush hour which is usually between 4-8pm.
+```{r}
+acc %>%
+  select(DRUNK_DR) %>%
+  table()
+```
+This table shows us that the majority of crashes do not have drunk drivers. The crashes that do, tend to only have one, with only a few cases having more than 1. The total number of crashes with at least one drunk driver is 8769.
+```{r}
+colnames(person)
+colnames(acc)
+```
