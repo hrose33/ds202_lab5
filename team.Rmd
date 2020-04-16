@@ -45,10 +45,14 @@ all_data <- merge(x=acc, y=person1, by="ST_CASE", all=TRUE)
 ```{r}
 all_data %>%
   select(HOUR.x, HOUR.y) %>%
-  table() 
+  table()
+```
+As we can see above, the data shows us that the hours that have the most crashes are 16, 17, and 18 which in our standard time is 4, 5, and 6pm. This makes sense because this is rush hour.
+```{r}
 all_data %>%
   select(DAY_WEEK, SEX) %>%
   table() %>%
   as.data.frame() %>%
   ggplot(aes(x=DAY_WEEK, y=Freq, fill=SEX)) + geom_bar(stat="identity")
 ```
+This graph shows us the amount of crashes per day, along with what gender is involved in the crash. As we can see, day 7 (Saturday) has the most crashes. The gender that is more frequently invovled is 1 (male). For gender, numbers 8 and 9 are unknown or not reported.
