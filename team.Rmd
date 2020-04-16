@@ -10,6 +10,9 @@ library(ggplot2)
 library(dplyr)
 library(tidyr)
 library(stringr)
+library(readxl)
+library(choroplethr)
+library(choroplethrMaps)
 ```
 
 ```{r}
@@ -18,36 +21,51 @@ acc <- read.csv("https://raw.githubusercontent.com/xdaiISU/ds202materials/master
 person <- read.csv("https://raw.githubusercontent.com/xdaiISU/ds202materials/master/hwlabs/fars2017/person.csv")
 ```
 
+# Problem 1
+
 ```{r}
 acc %>%
   select(DAY_WEEK) %>%
   table()
 ```
 As we can see, day 7 is the day with the most crashes. According to the FARS manual, day 7 is Saturday.
+
+# Problem 2
+
 ```{r}
 acc %>%
   select(HOUR) %>%
   table()
 ```
+
 The FARS manual declares the time variable in military time, and the hour with the most crashes is 18, or 6 o'clock. This makes sense because it is within rush hour which is usually between 4-8pm.
+
+# Problem 3
+
 ```{r}
 acc %>%
   select(DRUNK_DR) %>%
   table()
 ```
+
 This table shows us that the majority of crashes do not have drunk drivers. The crashes that do, tend to only have one, with only a few cases having more than 1. The total number of crashes with at least one drunk driver is 8769.
+
+# Problems 4-5
+
 ```{r}
 person1 <- person %>%
   filter(PER_TYP == 1)
 all_data <- merge(x=acc, y=person1, by="ST_CASE", all=TRUE)
-```
 
-```{r}
 all_data %>%
   select(HOUR.x, HOUR.y) %>%
   table()
 ```
+
 As we can see above, the data shows us that the hours that have the most crashes are 16, 17, and 18 which in our standard time is 4, 5, and 6pm. This makes sense because this is rush hour.
+
+# Problem 6
+
 ```{r}
 all_data %>%
   select(DAY_WEEK, SEX) %>%
@@ -55,4 +73,81 @@ all_data %>%
   as.data.frame() %>%
   ggplot(aes(x=DAY_WEEK, y=Freq, fill=SEX)) + geom_bar(stat="identity")
 ```
+
 This graph shows us the amount of crashes per day, along with what gender is involved in the crash. As we can see, day 7 (Saturday) has the most crashes. The gender that is more frequently invovled is 1 (male). For gender, numbers 8 and 9 are unknown or not reported.
+
+# Problem 7/8
+
+```{r}
+
+glcs <- read_excel("glcs.xlsx", sheet='GeoLocation_UnitedStates')
+glcs$`State Code` <- as.integer(glcs$`State Code`)
+glcs$`County Code` <- as.integer(glcs$`County Code`)
+
+glcsdrops <- c("Country Code", "Old City Name", "Date Record Added", "Territory", "City Name", "City Code")
+glcs <- glcs[ , !(names(glcs) %in% glcsdrops)]
+glcs <- glcs[!duplicated(glcs), ]
+
+acckeeps <- c("STATE", "COUNTY", "MONTH", "LATITUDE", "LONGITUD")
+acc <- acc[acckeeps]
+
+freq <- acc %>% 
+  group_by(STATE, COUNTY) %>% 
+  summarise(n=n()) %>% 
+  as.data.frame()
+
+counties <- maps::county.fips
+counties <- counties %>% 
+  separate(polyname, c("State Name", "County Name"), ",") %>% 
+  mutate(`State Name` = toupper(`State Name`),
+         `County Name` = toupper(`County Name`))
+
+joined <- full_join(glcs, counties, by= c("State Name", "County Name"))
+
+final <- full_join(freq, joined, by= c("STATE" = "State Code", "COUNTY" = "County Code"))
+
+problem8 <- data.frame("region" = final$fips,
+                       "value" = final$n) %>% 
+  na.omit() # Only omitting NAs because there are a number of counties that we don't have accidents for, which can cause issues with the package being used below for county plotting
+
+county_choropleth(problem8)
+```
+
+As we can see some of the most dangerous counties (in terms of accidents) are in the southwest region -- there are also a number of dangerous counties along the east coast. Very interestingly, using accident frequency, you can find the major cities in Iowa quite easily in Cedar Rapids/Iowa City (the two darker counties on the right side of the state) and Ames/Des Moines (in the center).
+
+# Problem 9
+
+```{r}
+freq2 <- acc %>% 
+  group_by(STATE, MONTH) %>% 
+  summarise(accident=n()) %>% 
+  as.data.frame() %>% 
+  mutate(season = ifelse(MONTH<4, "winter", ifelse(MONTH>9, "winter", "summer")))
+
+freq2 %>% 
+  group_by(MONTH) %>% 
+  summarise(total=sum(accident)) %>% 
+  ggplot(aes(x=MONTH, y=total)) +
+  geom_bar(stat="identity")
+
+problem9 <- freq2 %>% 
+  group_by(STATE, season) %>% 
+  summarise(total=sum(accident)) %>% 
+  pivot_wider(names_from = "season", values_from = "total") %>% 
+  mutate(pct_diff = (summer/winter*100)) %>% 
+  as.data.frame()
+
+sorted <- problem9[order(problem9$pct_diff),]
+
+head(sorted, 5)
+tail(sorted, 5)
+
+```
+
+In general, it looks like the peak month for accidents is July and that, in general, winter months tend to be lower than summer months. 
+
+There does tend to be seasonality effects for accidents in certain states. Attached is the head and tail of a dataframe where I found the total number of summer and winter accidents for each state and then divided summer accidents by winter accidents. This number (pct_diff) shows summer accidents as a percentage of winter accidents.
+
+It shows that in most states, summer and winter accidents are similar. However, there are a number of states where there appear to be many more accidents in the summer (culminating in State 51 = Virginia) where there are 150% more accidents during the summer than in the winter.
+
+As far as interpretation goes, we would need a lot more information on the cause of each and every accident (which is messy data in general). Our guess is that more drivers are on the road during the summer months which leads to more dangerous conditions. While it is true that the winter brings snow/ice, which are hard to drive in, winter also means that less people are out using their cars. Tourism is also a big industry and people are more likely to travel somewhere if it is warm (summer months). 
