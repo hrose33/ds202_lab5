@@ -37,6 +37,18 @@ acc %>%
 ```
 This table shows us that the majority of crashes do not have drunk drivers. The crashes that do, tend to only have one, with only a few cases having more than 1. The total number of crashes with at least one drunk driver is 8769.
 ```{r}
-colnames(person)
-colnames(acc)
+person1 <- person %>%
+  filter(PER_TYP == 1)
+all_data <- merge(x=acc, y=person1, by="ST_CASE", all=TRUE)
+```
+
+```{r}
+all_data %>%
+  select(HOUR.x, HOUR.y) %>%
+  table() 
+all_data %>%
+  select(DAY_WEEK, SEX) %>%
+  table() %>%
+  as.data.frame() %>%
+  ggplot(aes(x=DAY_WEEK, y=Freq, fill=SEX)) + geom_bar(stat="identity")
 ```
